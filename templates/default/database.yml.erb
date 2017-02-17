@@ -1,0 +1,14 @@
+<% @envs.each do |env| %>
+<%= env[:name] %>:
+  adapter:  postgresql
+  encoding: unicode
+  template: template0   # Required for UTF-8 encoding
+  database: <%= env[:postgres_database] %>
+  username: <%= env[:postgres_username] %>
+  password: <%= env[:postgres_password] %>
+  host:     <%= env[:postgres_host] %>
+  port:     <%= env[:postgres_port] %>
+  pool:     <%= env[:postgres_pool_size] %>
+  schema_search_path: public
+  sslmode: require
+<% end %>

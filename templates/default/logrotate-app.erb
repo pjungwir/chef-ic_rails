@@ -1,0 +1,11 @@
+/var/www/<%= @app %>/shared/log/*.log {
+       su <%= @app_user %> <%= @app_user %>
+       daily
+       rotate 3
+       copytruncate
+       delaycompress
+       compress
+       notifempty
+       missingok
+}
+

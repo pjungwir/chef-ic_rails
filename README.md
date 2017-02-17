@@ -17,6 +17,8 @@ Includes support for:
 This is all based on how I like to set up my systems,
 so it comes with database backups, logrotate configs, etc.
 It assumes you are using rbenv, god, and nginx, and deploying with Capistrano.
+It drops a `database.yml` and `.env` into cap's `shared` section
+so you can symlink to them.
 It's opinioned to cut down on how much I have to re-write every time I deploy a new Rails app.
 
 

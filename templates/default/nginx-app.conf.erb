@@ -1,0 +1,71 @@
+upstream <%= @app %> {
+  server unix:/var/www/<%= @app %>/shared/tmp/sockets/unicorn.sock fail_timeout=0;
+}
+
+server {
+  listen 80;
+  server_name <%= @hostnames.join(" ") %>;
+  return 301 https://$host$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name <%= @hostnames.map{|d| d =~ /^\*/ ? "\"#{d.sub("*", "~^(?<subdomain>[a-z]+)\\")}\"" : d }.join(" ") %>;
+
+  ssl_certificate ssl/<%= @app %>.crt;
+  ssl_certificate_key ssl/<%= @app %>.key;
+
+  root /var/www/<%= @app %>/current/public;
+
+  client_max_body_size  100m;
+  client_body_buffer_size 128k;
+
+  if ($request_method !~ ^(GET|HEAD|PUT|POST|DELETE|OPTIONS)$) {
+    return 405;
+  }
+
+  location ~ ^/(assets)/ {
+    gzip_static on;
+    expires max;
+    add_header Cache-Control public;
+    add_header Last-Modified "";
+    add_header ETag "";
+    break;
+  }
+
+  location / {
+    try_files $uri/index.html $uri.html $uri @<%= @app %>;
+    error_page 404             /404.html;
+    error_page 422             /422.html;
+    error_page 500 502 503 504 /500.html;
+    error_page 403             /403.html;
+  }
+
+  location @<%= @app %> {
+    proxy_pass http://<%= @app %>;
+    proxy_redirect off;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_connect_timeout 90;
+    proxy_send_timeout 90;
+    proxy_read_timeout 90;
+
+    proxy_buffer_size 4k;
+    proxy_buffers 4 32k;
+    proxy_busy_buffers_size 64k;
+    proxy_temp_file_write_size 64k;
+  }
+
+  location = /favicon.ico {
+    expires max;
+    add_header Cache-Control public;
+  }
+
+  location ~ \.(aspx|php|jsp|cgi)$ {
+    deny all;
+  }
+
+}
