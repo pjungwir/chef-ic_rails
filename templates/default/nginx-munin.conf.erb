@@ -1,0 +1,9 @@
+server {
+  listen   7778 ssl;
+  root /var/cache/munin/www;
+  auth_basic           "Restricted";
+  auth_basic_user_file /var/cache/munin/htpasswd.users;
+
+  ssl_certificate ssl/munin.crt;
+  ssl_certificate_key ssl/munin.key;
+}

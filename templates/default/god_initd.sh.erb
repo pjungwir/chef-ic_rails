@@ -1,0 +1,85 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: god
+# Default-Start:  2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: start and stop god
+# Description: monitoring by god.
+### END INIT INFO
+
+set -eu
+
+# source function library
+. /lib/lsb/init-functions
+
+NAME=god
+DESC="god daemon"
+RBENV_ROOT=/usr/local/rbenv
+PATH=$RBENV_ROOT/shims:$RBENV_ROOT/bin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+RUBY_PATH=$RBENV_ROOT/shims/ruby
+DAEMON=$RBENV_ROOT/shims/god
+PIDFILE=/var/run/god.pid
+LOGFILE=/var/log/god.log
+SCRIPTNAME=/etc/init.d/$NAME
+CONFIGFILEDIR=/etc/god
+
+# Gracefully exit if the package has been removed.
+test -x $DAEMON || exit 0
+
+RETVAL=0
+
+god_start() {
+  $DAEMON -c /etc/god/master.god -l $LOGFILE -P $PIDFILE || echo -en "\n already running"
+  # god takes a little while before it's actually ready.
+  # We do this because otherwise `service god restart && god restart foo` will fail.
+  sleep 2
+}
+
+god_stop() {
+  if [ -e "$PIDFILE" ]; then
+    kill -QUIT `cat $PIDFILE` || echo -en "\n not running"
+  else
+    echo -en "\n not running"
+  fi
+}
+
+god_reload() {
+  if [ -e "$PIDFILE" ]; then
+    kill -HUP `cat $PIDFILE` || echo -en "\n can't reload"
+  else
+    god_start
+  fi
+}
+
+case "$1" in
+  start)
+    echo -n "Starting $DESC: $NAME"
+    god_start
+    echo "."
+  ;;
+  stop)
+    echo -n "Stopping $DESC: $NAME"
+    god_stop
+    echo "."
+  ;;
+  reload)
+    echo -n "Reloading $DESC configuration..."
+    god_reload
+    echo "."
+  ;;
+  restart)
+    echo -n "Restarting $DESC: $NAME"
+    god_stop
+    sleep 5
+    god_start
+    echo "."
+  ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|restart|reload}" >&2
+    exit 3
+  ;;
+esac
+
+exit 0
+
