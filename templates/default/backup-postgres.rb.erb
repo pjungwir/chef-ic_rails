@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+
+require 'json'
+
+exit 0 if File.exists?("<%= node[:postgresql][:dir] %>/recovery.conf")    # Only backup on the master
+
+backups_dir = '<%= node[:postgresql][:data_dir] %>/backups'
+database = ARGV[0] or raise "Please give a database to be backed up"
+env = ARGV[1] or raise "Please give an environment"
+bucket_name = "<%= @backup_bucket %>"
+
+now = Time.now
+filename = "#{backups_dir}/#{database}-#{now.strftime("%Y-%m-%d-%H:%M")}.dump"
+cmd = "pg_dump --format=c -f #{filename} #{database}"
+system(cmd) or raise $?.to_s
+
+cmd = "ccencrypt -f -k <%= node[:postgresql][:dir] %>/backup_key_<%= @database %> '#{filename}'"
+system(cmd) or raise $?.to_s
+filename = "#{filename}.cpt"
+
+# Upload the backup:
+
+# j = JSON.parse(`curl http://169.254.169.254/latest/meta-data/iam/security-credentials/#{env}-db`)
+
+s3 = Aws::S3::Client.new(
+  access_key_id: "<%= @access_key_id %>",
+  secret_access_key: "<%= @secret_access_key %>",
+  region: '<%= @backup_region %>'
+)
+s3.put_object(key: "<%= node.chef_environment %>/#{File.basename(filename)}",
+              body: open(filename),
+              bucket: bucket_name)
+
+# Clean old backups:
+
+too_old = (Time.now - <%= @backup_retention %>.weeks).to_date
+
+s3.list_objects(bucket: bucket_name).contents.each do |o|
+  if o.key =~ /-(\d\d\d\d-\d\d-\d\d)-\d\d:\d\d.dump.cpt\z/
+    date = Date.strptime($1, "%Y-%m-%d")
+    if date < too_old
+      s3.delete_object(bucket: bucket_name, key: o.key)
+    end
+  end
+end
+
+File.unlink filename
+
