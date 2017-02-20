@@ -35,6 +35,8 @@ action :create do
     end
   end
 
+  wants_sidekiq = sidekiq_processes > 0
+
   # A place for the app to live:
   directory '/var/www' do
     owner 'root'
@@ -82,19 +84,6 @@ action :create do
   end
 
   if wants_unicorn
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFF #{app} FFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
-    puts "FFFFFFFFFFFFFFFFFFFFFFFFF"
     unicorn app do
       app_user new_resource.app_user
       rails_env new_resource.rails_env
@@ -102,6 +91,14 @@ action :create do
       hostnames new_resource.hostnames
       ssl_cert new_resource.ssl_cert
       ssl_key new_resource.ssl_key
+    end
+  end
+
+  if wants_sidekiq
+    sidekiq app do
+      app_user new_resource.app_user
+      rails_env new_resource.rails_env
+      sidekiq_processes new_resource.unicorn_workers
     end
   end
 
