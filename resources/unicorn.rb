@@ -10,6 +10,23 @@ property :ssl_key, String, required: true
 
 action :create do
 
+  # We have to repeat some services here so that we can notify them.
+  # https://github.com/chef/chef/issues/3575
+  # This is pretty ugly though.
+  # The nice would to do would be:
+  # - Have *our* god and nginx resources accept a :restart action.
+  # - Notify those from here.
+  #   It sounds like on recent chef versions that works, otherwise use Poise.
+  service 'god' do
+    action :nothing
+    supports start: true, stop: true, restart: true, reload: true
+  end
+  service 'nginx' do
+    action :nothing
+    supports start: true, stop: true, restart: true, reload: true
+  end
+
+
   the_rails_env = if property_is_set?(:rails_env)
                     rails_env
                   else

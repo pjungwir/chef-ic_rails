@@ -11,6 +11,7 @@ action :create do
     uri "http://ppa.launchpad.net/tuxpoldo/munin/ubuntu/"
     distribution "#{node['lsb']['codename']}"
     components   ["main"]
+    cookbook     'ic_rails'
     key          'munin-signing-key'
     action :add
   end

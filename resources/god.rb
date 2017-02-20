@@ -24,6 +24,8 @@ action :create do
   end
 
   cookbook_file '/etc/god/master.god' do
+    cookbook 'ic_rails'
+    source 'master.god'
     owner 'root'
     group 'root'
     mode '0755'
