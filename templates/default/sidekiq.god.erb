@@ -15,7 +15,7 @@ if File.exists? '/var/www/<%= @app %>/current'
       w.dir      = app_root
       w.pid_file = "#{app_root}/tmp/pids/#{w.name}.pid"
       w.start    = "cd '#{app_root}' && #{cmd_prefix} taskset -c #{i} bundle exec sidekiq --environment <%= @env %> --pidfile #{w.pid_file} --daemon --logfile #{w.log}"
-      w.stop     = "cd '#{app_root}' && #{cmd_prefix} bundle exec ./bin/sidekiqctl stop #{w.pid_file}"
+      w.stop     = "cd '#{app_root}' && #{cmd_prefix} bundle exec sidekiqctl stop #{w.pid_file}"
 
       # determine the state on startup
       w.transition(:init, { true => :up, false => :start }) do |on|
