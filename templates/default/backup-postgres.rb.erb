@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'json'
+require 'aws-sdk-core'
 
 exit 0 if File.exists?("<%= node[:postgresql][:dir] %>/recovery.conf")    # Only backup on the master
 
@@ -33,7 +34,9 @@ s3.put_object(key: "<%= node.chef_environment %>/#{File.basename(filename)}",
 
 # Clean old backups:
 
-too_old = (Time.now - <%= @backup_retention %>.weeks).to_date
+max_age_in_weeks = <%= @backup_retention %> # N.B. we have no ActiveSupport here
+max_age = max_age_in_weeks*7*24*60*60
+too_old = (Time.now - max_age).to_date
 
 s3.list_objects(bucket: bucket_name).contents.each do |o|
   if o.key =~ /-(\d\d\d\d-\d\d-\d\d)-\d\d:\d\d.dump.cpt\z/
