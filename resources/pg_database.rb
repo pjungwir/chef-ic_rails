@@ -2,6 +2,7 @@ resource_name :pg_database
 
 property :database, String, name_property: true
 property :owner, String, required: true
+property :password, String, required: true
 property :with_postgis, :boolean, required: true
 property :backup_region, String, required: true
 property :backup_bucket, String, required: true
@@ -24,13 +25,14 @@ action :create do
   bash "create-postgres-database-#{database}" do
     user 'postgres'
     code <<-EOQ
-      set -e
+      set -eu
+      echo 'CREATE USER "#{owner}" WITH PASSWORD "#{password}"'           | #{psql}
       echo 'CREATE DATABASE "#{database}" OWNER "#{owner}"'               | #{psql}
       echo 'GRANT ALL PRIVILEGES ON DATABASE "#{database}" TO "#{owner}"' | #{psql}
     EOQ
     only_if do
       system("invoke-rc.d postgresql status | grep main") and 
-        `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp != '1'
+        `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp == '0'
     end
     action :run
   end
@@ -50,7 +52,7 @@ action :create do
       EOQ
       only_if do
         system("invoke-rc.d postgresql status | grep main") and
-          `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp != '1'
+          `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '0'
       end
       action :run
     end

@@ -22,7 +22,7 @@ action :create do
     EOQ
     only_if do
       system("invoke-rc.d postgresql status | grep main") and 
-        `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='#{extension}') TO STDOUT WITH CSV" | su - postgres -c "psql -v ON_ERROR_STOP=1 --no-psqlrc '#{database}'"`.chomp == '1'
+        `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='#{extension}') TO STDOUT WITH CSV" | su - postgres -c "psql -v ON_ERROR_STOP=1 --no-psqlrc '#{database}'"`.chomp == '0'
     end
     action :run
   end
