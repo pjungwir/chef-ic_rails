@@ -2,6 +2,7 @@ resource_name :pg_database
 
 property :database, String, name_property: true
 property :owner, String, required: true
+property :with_postgis, :boolean, required: true
 property :backup_region, String, required: true
 property :backup_bucket, String, required: true
 property :backup_retention, Integer, default: 2   # in weeks
@@ -18,18 +19,41 @@ action :create do
   assert_safe_string! database, 'database'
   assert_safe_string! owner, 'owner'
 
+  psql = "psql -v ON_ERROR_STOP=1 --no-psqlrc"
+
   bash "create-postgres-database-#{database}" do
     user 'postgres'
     code <<-EOQ
       set -e
-      echo 'CREATE DATABASE "#{database}" OWNER "#{owner}"'               | psql -v ON_ERROR_STOP=1 --no-psqlrc
-      echo 'GRANT ALL PRIVILEGES ON DATABASE "#{database}" TO "#{owner}"' | psql -v ON_ERROR_STOP=1 --no-psqlrc
+      echo 'CREATE DATABASE "#{database}" OWNER "#{owner}"'               | #{psql}
+      echo 'GRANT ALL PRIVILEGES ON DATABASE "#{database}" TO "#{owner}"' | #{psql}
     EOQ
     only_if do
       system("invoke-rc.d postgresql status | grep main") and 
-        `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "psql -v ON_ERROR_STOP=1 --no-psqlrc"`.chomp == '1'
+        `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp == '1'
     end
     action :run
+  end
+
+  if with_postgis
+    bash "create-postgis-extension-for-#{database}" do
+      user 'postgres'
+      code <<-EOQ
+        set -eu
+        echo 'CREATE SCHEMA postgis AUTHORIZATION "#{owner}";' | #{psql} '#{database}'
+        echo 'SET search_path TO postgis; CREATE EXTENSION postgis;' | #{psql} '#{database}'
+        echo 'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA postgis TO "#{owner}"' | #{psql} '#{database}'
+        echo 'GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA postgis TO "#{owner}"' | #{psql} '#{database}'
+        echo 'ALTER VIEW postgis.geometry_columns OWNER TO "#{owner}"' | #{psql} '#{database}'
+        echo 'ALTER VIEW postgis.geography_columns OWNER TO "#{owner}"' | #{psql} '#{database}'
+        echo 'ALTER TABLE postgis.spatial_ref_sys OWNER TO "#{owner}"' | #{psql} '#{database}'
+      EOQ
+      only_if do
+        system("invoke-rc.d postgresql status | grep main") and
+          `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '1'
+      end
+      action :run
+    end
   end
 
   # Backups:
