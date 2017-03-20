@@ -32,7 +32,7 @@ Only Ubuntu is supported right now.
 Recipes
 -------
 
-Actually there are no recipes yet!
+There are no recipes! Instead you should use the LWRPs inside your own recipes.
 
 
 LWRPs
