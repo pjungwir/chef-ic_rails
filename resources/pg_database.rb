@@ -28,7 +28,7 @@ action :create do
       echo 'CREATE DATABASE "#{database}" OWNER "#{owner}"'               | #{psql}
       echo 'GRANT ALL PRIVILEGES ON DATABASE "#{database}" TO "#{owner}"' | #{psql}
     EOQ
-    only_if do
+    not_if do
       system("invoke-rc.d postgresql status | grep main") and 
         `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp == '1'
     end
@@ -48,7 +48,7 @@ action :create do
         echo 'ALTER VIEW postgis.geography_columns OWNER TO "#{owner}"' | #{psql} '#{database}'
         echo 'ALTER TABLE postgis.spatial_ref_sys OWNER TO "#{owner}"' | #{psql} '#{database}'
       EOQ
-      only_if do
+      not_if do
         system("invoke-rc.d postgresql status | grep main") and
           `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '1'
       end
