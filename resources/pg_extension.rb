@@ -4,20 +4,9 @@ property :extension, String, name_property: true
 property :database, String, required: true
 property :schema, String, default: "public"
 
-def assert_safe_string!(str, used_for)
-  raise "Invalid #{used_for}: #{str}" unless str =~ %r{\A[a-zA-Z0-9_ -]+\z}
-end
-
-def postgres_is_running?
-  cmd = case node['platform']
-        when 'ubuntu'; "invoke-rc.d postgresql status | grep main"
-        when 'centos'; "service postgresql status | grep 'active (running)'"
-        else raise "Unknown platform: #{node['platform']}"
-        end
-  system(cmd)
-end
-
 action :create do
+  self.class.send(:include, IcRails::Helper)
+  Chef::Resource::Bash.send(:include, IcRails::Helper)
   
   assert_safe_string! database, 'database'
   assert_safe_string! extension, 'extension'
@@ -27,10 +16,10 @@ action :create do
     user 'postgres'
     code <<-EOQ
       set -e
-      echo 'CREATE EXTENSION "#{extension}" WITH SCHEMA "#{schema}"' | psql -v ON_ERROR_STOP=1 --no-psqlrc '#{database}'
+      echo 'CREATE EXTENSION "#{extension}" WITH SCHEMA "#{schema}"' | #{psql} '#{database}'
     EOQ
     only_if do
-      postgres_is_running? and `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='#{extension}') TO STDOUT WITH CSV" | su - postgres -c "psql -v ON_ERROR_STOP=1 --no-psqlrc '#{database}'"`.chomp == '0'
+      postgres_is_running? and `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='#{extension}') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '0'
     end
     action :run
   end

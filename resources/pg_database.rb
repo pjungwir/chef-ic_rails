@@ -11,26 +11,12 @@ property :aws_access_key_id, String, required: true
 property :aws_secret_access_key, String, required: true
 property :with_rbenv, [TrueClass, FalseClass], default: true
 
-# TODO: DRY these up!
-def assert_safe_string!(str, used_for)
-  raise "Invalid #{used_for}: #{str}" unless str =~ %r{\A[a-zA-Z0-9_ -]+\z}
-end
-
-def postgres_is_running?
-  cmd = case node['platform']
-        when 'ubuntu'; "invoke-rc.d postgresql status | grep main"
-        when 'centos'; "service postgresql status | grep 'active (running)'"
-        else raise "Unknown platform: #{node['platform']}"
-        end
-  system(cmd)
-end
-
 action :create do
+  self.class.send(:include, IcRails::Helper)
+  Chef::Resource::Bash.send(:include, IcRails::Helper)
   
   assert_safe_string! database, 'database'
   assert_safe_string! owner, 'owner'
-
-  psql = "psql -v ON_ERROR_STOP=1 --no-psqlrc"
 
   bash "create-postgres-database-#{database}" do
     user 'postgres'
