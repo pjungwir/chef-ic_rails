@@ -132,4 +132,19 @@ Adds an extension to a database.
 * `schema` - Defaults to `public`.
 
 
+Testing 
+-------
+
+Do this:
+
+    gem install bundler
+    bundle install
+    berks install
+    kitchen create
+    kitchen converge
+    kitchen verify
+
+or to test on a fresh instance:
+
+    kitchen test
 

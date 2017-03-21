@@ -2,17 +2,27 @@ resource_name :pg_database
 
 property :database, String, name_property: true
 property :owner, String, required: true
-property :password, String, required: true
-property :with_postgis, :boolean, required: true
+property :with_postgis, [TrueClass, FalseClass], default: false
 property :backup_region, String, required: true
 property :backup_bucket, String, required: true
 property :backup_retention, Integer, default: 2   # in weeks
 property :backup_key, String, required: true
 property :aws_access_key_id, String, required: true
 property :aws_secret_access_key, String, required: true
+property :with_rbenv, [TrueClass, FalseClass], default: true
 
+# TODO: DRY these up!
 def assert_safe_string!(str, used_for)
   raise "Invalid #{used_for}: #{str}" unless str =~ %r{\A[a-zA-Z0-9_ -]+\z}
+end
+
+def postgres_is_running?
+  cmd = case node['platform']
+        when 'ubuntu'; "invoke-rc.d postgresql status | grep main"
+        when 'centos'; "service postgresql status | grep 'active (running)'"
+        else raise "Unknown platform: #{node['platform']}"
+        end
+  system(cmd)
 end
 
 action :create do
@@ -26,13 +36,11 @@ action :create do
     user 'postgres'
     code <<-EOQ
       set -eu
-      echo 'CREATE USER "#{owner}" WITH PASSWORD "#{password}"'           | #{psql}
       echo 'CREATE DATABASE "#{database}" OWNER "#{owner}"'               | #{psql}
       echo 'GRANT ALL PRIVILEGES ON DATABASE "#{database}" TO "#{owner}"' | #{psql}
     EOQ
     only_if do
-      system("invoke-rc.d postgresql status | grep main") and 
-        `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp == '0'
+      postgres_is_running? and `echo "COPY (SELECT COUNT(1) FROM pg_database WHERE datname='#{database}') TO STDOUT WITH CSV" | su - postgres -c "#{psql}"`.chomp == '0'
     end
     action :run
   end
@@ -51,8 +59,7 @@ action :create do
         echo 'ALTER TABLE postgis.spatial_ref_sys OWNER TO "#{owner}"' | #{psql} '#{database}'
       EOQ
       only_if do
-        system("invoke-rc.d postgresql status | grep main") and
-          `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '0'
+        postgres_is_running? and `echo "COPY (SELECT COUNT(1) FROM pg_extension WHERE extname='postgis') TO STDOUT WITH CSV" | su - postgres -c "#{psql} '#{database}'"`.chomp == '0'
       end
       action :run
     end
@@ -64,10 +71,17 @@ action :create do
   %w{aws-s3 aws-sdk-core}.each do |gem|
     bash "install #{gem} gem" do
       user 'root'
-      code <<-EOQ
-        set -e
-        source /etc/profile.d/rbenv.sh && /usr/local/rbenv/shims/gem install #{gem} && rbenv rehash
-      EOQ
+      if with_rbenv
+        code <<-EOQ
+          set -eu
+          source /etc/profile.d/rbenv.sh && /usr/local/rbenv/shims/gem install #{gem} && rbenv rehash
+        EOQ
+      else
+        code <<-EOQ
+          set -eu
+          gem install #{gem}
+        EOQ
+      end
     end
   end
 

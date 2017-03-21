@@ -1,6 +1,7 @@
 name "ic_rails"
 description "Rails apps how I like"
 supports "ubuntu"
+version "0.1.0"
 
 depends 'apt'
 depends 'fail2ban'
