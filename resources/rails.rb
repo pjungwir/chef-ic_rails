@@ -8,6 +8,7 @@ property :postgres_password, String, required: true
 property :postgres_host, String, required: true
 property :postgres_port, Integer, default: 5432
 property :postgres_pool_size, Integer, required: true
+property :with_postgis, [TrueClass, FalseClass], default: false
 property :rails_env, String, regex: %r{\A[a-z0-9_]+\z}
 property :envvars, Hash, default: {}
 
@@ -63,7 +64,8 @@ action :create do
     owner app_user
     group app_user
     mode "0600"
-    variables envs: [{
+    variables adapter: (with_postgis ? 'postgis' : 'postgresql'),
+              envs: [{
                 name: the_rails_env,
                 postgres_database: postgres_database,
                 postgres_username: postgres_username,

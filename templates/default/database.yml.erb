@@ -1,6 +1,6 @@
 <% @envs.each do |env| %>
 <%= env[:name] %>:
-  adapter:  postgresql
+  adapter:  <%= @adapter %>
   encoding: unicode
   template: template0   # Required for UTF-8 encoding
   database: <%= env[:postgres_database] %>
