@@ -9,6 +9,6 @@
   host:     <%= env[:postgres_host] %>
   port:     <%= env[:postgres_port] %>
   pool:     <%= env[:postgres_pool_size] %>
-  schema_search_path: public
+  schema_search_path: public<%= (@adapter == 'postgis' ? ', postgis' : '') %>
   sslmode: require
 <% end %>
