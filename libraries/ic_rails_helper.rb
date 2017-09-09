@@ -7,7 +7,7 @@ module IcRails
 
     def postgres_is_running?
       cmd = case node['platform']
-            when 'ubuntu';
+            when 'ubuntu'
               case node['platform_version']
               when '16.04'; "systemctl status postgresql | grep 'Active: active'"
               else "invoke-rc.d postgresql status | grep main"
