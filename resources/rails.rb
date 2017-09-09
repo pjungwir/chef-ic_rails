@@ -18,6 +18,10 @@ property :hostnames, Array
 property :ssl_cert, String
 property :ssl_key, String
 
+# If you want http basic auth, fill these out:
+property :http_auth_username, String
+property :http_auth_password, String
+
 # If you want sidekiq, fill these out:
 property :sidekiq_processes, Integer, default: 0
 
@@ -85,6 +89,8 @@ action :create do
     variables envvars: envvars
   end
 
+  # Have to check outside the other resource:
+  has_http_auth = property_is_set?(:http_auth_username)
   if wants_unicorn
     unicorn app do
       app_user new_resource.app_user
@@ -93,6 +99,8 @@ action :create do
       hostnames new_resource.hostnames
       ssl_cert new_resource.ssl_cert
       ssl_key new_resource.ssl_key
+      http_auth_username (has_http_auth ? new_resource.http_auth_username : nil)
+      http_auth_password (has_http_auth ? new_resource.http_auth_password : nil)
     end
   end
 

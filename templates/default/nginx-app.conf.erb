@@ -17,6 +17,11 @@ server {
 
   root /var/www/<%= @app %>/current/public;
 
+  <% if @has_http_auth %>
+    auth_basic "Restricted";
+    auth_basic_user_file htpasswd.<%= @app %>;
+  <% end %>
+
   client_max_body_size  100m;
   client_body_buffer_size 128k;
 
