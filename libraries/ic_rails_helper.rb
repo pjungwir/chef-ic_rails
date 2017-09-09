@@ -19,7 +19,7 @@ module IcRails
     end
 
     def psql
-      "psql -v ON_ERROR_STOP=1 --no-psqlrc"
+      "psql -v ON_ERROR_STOP=1 --no-psqlrc -p #{node[:postgresql][:config][:port]}"
     end
 
   end
