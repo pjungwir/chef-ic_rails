@@ -7,13 +7,24 @@ action :create do
   # We use this source for munin
   # because the standard one interferes with our nginx installation.
   # TODO: Put this in our own apt repository.
-  apt_repository "munin" do
-    uri "http://ppa.launchpad.net/tuxpoldo/munin/ubuntu/"
-    distribution "#{node['lsb']['codename']}"
-    components   ["main"]
-    cookbook     'ic_rails'
-    key          'munin-signing-key'
-    action :add
+  if node['platform_version'] == "16.04"
+    apt_repository "munin" do
+      uri "http://ppa.launchpad.net/hawq/munin/ubuntu/"
+      distribution "#{node['lsb']['codename']}"
+      components   ["main"]
+      cookbook     'ic_rails'
+      key          'hawq-munin-signing-key'
+      action :add
+    end
+  else
+    apt_repository "munin" do
+      uri "http://ppa.launchpad.net/tuxpoldo/munin/ubuntu/"
+      distribution "#{node['lsb']['codename']}"
+      components   ["main"]
+      cookbook     'ic_rails'
+      key          'tuxpoldo-munin-signing-key'
+      action :add
+    end
   end
 
   execute "apt-get-update" do
