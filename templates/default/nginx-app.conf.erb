@@ -25,7 +25,7 @@ server {
   client_max_body_size  100m;
   client_body_buffer_size 128k;
 
-  if ($request_method !~ ^(GET|HEAD|PUT|POST|DELETE|OPTIONS)$) {
+  if ($request_method !~ ^(GET|HEAD|PUT|PATCH|POST|DELETE|OPTIONS)$) {
     return 405;
   }
 
