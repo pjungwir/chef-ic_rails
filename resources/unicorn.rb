@@ -8,6 +8,10 @@ property :hostnames, Array, required: true
 property :ssl_cert, String, required: true
 property :ssl_key, String, required: true
 
+# If you want http basic auth, fill these out:
+property :http_auth_username, String
+property :http_auth_password, String
+
 action :create do
 
   # We have to repeat some services here so that we can notify them.
@@ -78,12 +82,25 @@ action :create do
     end
   end
 
+  has_http_auth = property_is_set?(:http_auth_username)
+  if has_http_auth
+    package 'apache2-utils'
+    file "htpasswd" do
+      path "#{node['nginx']['dir']}/htpasswd.#{app}"
+      owner "root"
+      group "root"
+      mode "0700"
+      content lazy { IO.popen(["htpasswd", "-nb", http_auth_username, http_auth_password]) { |f| f.gets } }
+    end
+  end
+
   template "#{node['nginx']['dir']}/sites-available/#{app}" do
     cookbook 'ic_rails'
     source 'nginx-app.conf.erb'
     variables env: rails_env,
               app: app,
-              hostnames: hostnames
+              hostnames: hostnames,
+              has_http_auth: has_http_auth
     owner "root"
     group "root"
     mode "0755"
