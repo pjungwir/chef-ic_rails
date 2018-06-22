@@ -41,7 +41,7 @@ action :create do
 
     execute "apt-get-update" do
       command "apt-get update"
-      only_if { File.exists? "/usr/bin/apt-get" }
+      only_if { ::File.exists? "/usr/bin/apt-get" }
     end
 
   when 'rhel'
