@@ -25,6 +25,9 @@ property :http_auth_password, String
 # If you want sidekiq, fill these out:
 property :sidekiq_processes, Integer, default: 0
 
+# If you want delayed_job, fill these out:
+property :delayed_job_processes, Integer, default: 0
+
 action :create do
 
   the_rails_env = if property_is_set?(:rails_env)
@@ -41,6 +44,7 @@ action :create do
   end
 
   wants_sidekiq = sidekiq_processes > 0
+  wants_delayed_job = delayed_job_processes > 0
 
   # A place for the app to live:
   directory '/var/www' do
@@ -108,7 +112,15 @@ action :create do
     sidekiq app do
       app_user new_resource.app_user
       rails_env new_resource.rails_env
-      sidekiq_processes new_resource.unicorn_workers
+      sidekiq_processes new_resource.sidekiq_processes
+    end
+  end
+
+  if wants_delayed_job
+    delayed_job app do
+      app_user new_resource.app_user
+      rails_env new_resource.rails_env
+      delayed_job_processes new_resource.delayed_job_processes
     end
   end
 

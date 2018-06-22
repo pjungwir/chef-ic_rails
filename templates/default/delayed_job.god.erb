@@ -1,0 +1,53 @@
+# Don't start watching until cap has deployed at least once:
+if File.exists? '/var/www/<%= @app %>/current'
+  app_root = "/var/www/<%= @app %>/current"
+  cmd_prefix = "PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH"
+
+  God.watch do |w|
+    w.name     = "<%= @app %>-delayed_job"
+    w.interval = 30.seconds
+    w.log      = File.join(app_root, 'log', "#{w.name}.god.log")
+    w.uid      = '<%= @app_user %>'
+    w.gid      = '<%= @app_user %>'
+    w.env      = { 'RAILS_ENV' => '<%= @env %>', 'HOME' => app_root }
+    w.dir      = app_root
+    w.pid_file = "#{app_root}/tmp/pids/#{w.name}.pid"
+    w.start    = "cd '#{app_root}' && #{cmd_prefix} bundle exec bin/delayed_job -n <%= @delayed_job_processes %> start"
+    w.stop     = "cd '#{app_root}' && #{cmd_prefix} bundle exec bin/delayed_job stop"
+
+    w.behavior(:clean_pid_file)
+
+    w.start_if do |start|
+      start.condition(:process_running) do |c|
+        c.interval = 5.seconds
+        c.running = false
+      end
+    end
+
+=begin
+    w.restart_if do |restart|
+      restart.condition(:memory_usage) do |c|
+        c.above = 300.megabytes
+        c.times = [3, 5] # 3 out of 5 intervals
+      end
+
+      restart.condition(:cpu_usage) do |c|
+        c.above = 50.percent
+        c.times = 5
+      end
+    end
+=end
+
+    w.lifecycle do |on|
+      on.condition(:flapping) do |c|
+        c.to_state = [:start, :restart]
+        c.times = 5
+        c.within = 5.minute
+        c.transition = :unmonitored
+        c.retry_in = 10.minutes
+        c.retry_times = 5
+        c.retry_within = 2.hours
+      end
+    end
+  end
+end
