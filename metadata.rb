@@ -4,6 +4,7 @@ supports "ubuntu"
 version "0.1.0"
 
 depends 'apt'
+depends 'yum-epel'
 depends 'fail2ban'
 depends 'openssl'
 depends 'openssh'

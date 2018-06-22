@@ -3,7 +3,11 @@
 #
 
 log_level 4
+<% if node['platform_family'] == 'rhel' %>
+log_file /var/log/munin-node/munin-node.log
+<% else %>
 log_file /var/log/munin/munin-node.log
+<% end %>
 pid_file /var/run/munin/munin-node.pid
 
 background 1
@@ -15,7 +19,7 @@ group root
 # Regexps for files to ignore
 
 ignore_file ~$
-#ignore_file [#~]$  # FIX doesn't work. '#' starts a comment
+ignore_file [\#~]$
 ignore_file DEADJOE$
 ignore_file \.bak$
 ignore_file %$
@@ -34,6 +38,7 @@ ignore_file \.pod$
 # may repeat the allow line as many times as you'd like
 
 allow ^127\.0\.0\.1$
+allow ^::1$
 allow ^<%= @munin_server.gsub('.', "\\.") %>$
 
 # If you have installed the Net::CIDR perl module, you can use one or more
