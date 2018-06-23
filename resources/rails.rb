@@ -94,7 +94,7 @@ action :create do
   end
 
   # Have to check outside the other resource:
-  has_http_auth = property_is_set?(:http_auth_username)
+  has_http_auth = (new_resource.property_is_set?(:http_auth_username) and !new_resource.http_auth_username.nil? and new_resource.property_is_set?(:http_auth_password) and !new_resource.http_auth_password.nil?)
   if wants_unicorn
     unicorn app do
       app_user new_resource.app_user
@@ -103,8 +103,8 @@ action :create do
       hostnames new_resource.hostnames
       ssl_cert new_resource.ssl_cert
       ssl_key new_resource.ssl_key
-      http_auth_username (has_http_auth ? new_resource.http_auth_username : nil)
-      http_auth_password (has_http_auth ? new_resource.http_auth_password : nil)
+      http_auth_username new_resource.http_auth_username if has_http_auth
+      http_auth_password new_resource.http_auth_password if has_http_auth
     end
   end
 

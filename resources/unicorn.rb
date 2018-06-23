@@ -82,7 +82,7 @@ action :create do
     end
   end
 
-  has_http_auth = property_is_set?(:http_auth_username)
+  has_http_auth = (new_resource.property_is_set?(:http_auth_username) and !new_resource.http_auth_username.nil? and new_resource.property_is_set?(:http_auth_password) and !new_resource.http_auth_password.nil?)
   if has_http_auth
     package 'apache2-utils'
     file "htpasswd" do
@@ -90,7 +90,7 @@ action :create do
       owner "root"
       group "root"
       mode "0700"
-      content lazy { IO.popen(["htpasswd", "-nb", http_auth_username, http_auth_password]) { |f| f.gets } }
+      content lazy { IO.popen(["htpasswd", "-nb", new_resource.http_auth_username, new_resource.http_auth_password]) { |f| f.gets } }
     end
   end
 
