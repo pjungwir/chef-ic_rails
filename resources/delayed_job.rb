@@ -19,29 +19,29 @@ action :create do
     supports start: true, stop: true, restart: true, reload: true
   end
 
-  service "#{app}-delayed_job" do 
+  service "#{new_resource.app}-delayed_job" do
     action :nothing
-    start_command   "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god start #{app}-delayed_job'"
-    stop_command    "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god stop #{app}-delayed_job'"
-    restart_command "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god restart #{app}-delayed_job'"
+    start_command   "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god start #{new_resource.app}-delayed_job'"
+    stop_command    "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god stop #{new_resource.app}-delayed_job'"
+    restart_command "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god restart #{new_resource.app}-delayed_job'"
   end   
 
-	bash "#{app_user}-in-sudoers" do
+	bash "#{new_resource.app_user}-in-sudoers" do
 		code <<-EOS
-			echo "#{app_user}\tALL=NOPASSWD:/usr/local/rbenv/shims/god" >> /etc/sudoers
+			echo "#{new_resource.app_user}\tALL=NOPASSWD:/usr/local/rbenv/shims/god" >> /etc/sudoers
 		EOS
 		not_if do
-			system("grep '/usr/local/rbenv/shims/god' /etc/sudoers | grep '#{app_user}'")
+			system("grep '/usr/local/rbenv/shims/god' /etc/sudoers | grep '#{new_resource.app_user}'")
 		end
 	end
 
-  template "/etc/god/conf.d/#{app}-delayed_job.god" do
+  template "/etc/god/conf.d/#{new_resource.app}-delayed_job.god" do
     cookbook 'ic_rails'
     source "delayed_job.god.erb"
-    variables app: app,
-              app_user: app_user,
+    variables app: new_resource.app,
+              app_user: new_resource.app_user,
               env: node.chef_environment,
-              delayed_job_processes: delayed_job_processes
+              delayed_job_processes: new_resource.delayed_job_processes
     owner "root"
     group "root"
     mode "0775"

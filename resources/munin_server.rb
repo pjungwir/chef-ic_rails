@@ -13,11 +13,11 @@ action :create do
 
   package "munin"
 
-  if property_is_set? :http_auth_password
+  if new_resource.property_is_set? :http_auth_password
     web_group = node['nginx']['group']
     hashed_password = nil
     require 'open3'
-    Open3.popen3("openssl", "passwd", "-apr1", http_auth_password) do |stdin, stdout, stderr, wait_thread|
+    Open3.popen3("openssl", "passwd", "-apr1", new_resource.http_auth_password) do |stdin, stdout, stderr, wait_thread|
       hashed_password = stdout.read.chomp
     end
     raise "Expected to get a hashed password" unless hashed_password
@@ -32,17 +32,17 @@ action :create do
     end
   end
 
-  if property_is_set?(:ssl_cert) != property_is_set?(:ssl_key)
+  if new_resource.property_is_set?(:ssl_cert) != new_resource.property_is_set?(:ssl_key)
     raise "Must have neither or both of ssl_cert and ssl_key"
   end
 
-  if property_is_set?(:ssl_cert)
+  if new_resource.property_is_set?(:ssl_cert)
     %w{crt key}.each do |ext|
       file "#{node['nginx']['dir']}/ssl/munin.#{ext}" do
         owner 'root'
         group 'root'
         mode '0600'
-        content(ext == 'crt' ? ssl_cert : ssl_key)
+        content(ext == 'crt' ? new_resource.ssl_cert : new_resource.ssl_key)
       end
     end
   end

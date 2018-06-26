@@ -55,7 +55,7 @@ action :create do
     owner "root"
     group "root"
     mode "0644"
-    variables munin_server: server
+    variables munin_server: new_resource.server
   end
 
   service "munin-node" do

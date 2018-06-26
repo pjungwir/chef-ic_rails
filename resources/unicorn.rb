@@ -31,54 +31,59 @@ action :create do
   end
 
 
-  the_rails_env = if property_is_set?(:rails_env)
-                    rails_env
+  the_rails_env = if new_resource.property_is_set?(:rails_env)
+                    new_resource.rails_env
                   else
                     node.chef_environment
                   end
 
-	service "#{app}-unicorn" do
+	service "#{new_resource.app}-unicorn" do
 		action :nothing
-		start_command   "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god start #{app}-unicorn'"
-		stop_command    "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god stop #{app}-unicorn'"
-		restart_command "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god restart #{app}-unicorn'"
+		start_command   "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god start #{new_resource.app}-unicorn'"
+		stop_command    "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god stop #{new_resource.app}-unicorn'"
+		restart_command "bash -c 'PATH=/usr/local/rbenv/shims:/usr/local/rbenv/bin:$PATH god restart #{new_resource.app}-unicorn'"
 	end
 
-	bash "#{app_user}-in-sudoers" do
+	bash "#{new_resource.app_user}-in-sudoers" do
 		code <<-EOS
-			echo "#{app_user}\tALL=NOPASSWD:/usr/local/rbenv/shims/god" >> /etc/sudoers
+			echo "#{new_resource.app_user}\tALL=NOPASSWD:/usr/local/rbenv/shims/god" >> /etc/sudoers
 		EOS
 		not_if do
-			system("grep '/usr/local/rbenv/shims/god' /etc/sudoers | grep '#{app_user}'")
+			system("grep '/usr/local/rbenv/shims/god' /etc/sudoers | grep '#{new_resource.app_user}'")
 		end
 	end
 
-  template "/etc/god/conf.d/#{app}-unicorn.god" do
+  template "/etc/god/conf.d/#{new_resource.app}-unicorn.god" do
     cookbook 'ic_rails'
     source "unicorn.god.erb"
-    variables app: app,
-              app_user: app_user,
+    variables app: new_resource.app,
+              app_user: new_resource.app_user,
               env: the_rails_env,
-              unicorn_workers: unicorn_workers
+              unicorn_workers: new_resource.unicorn_workers
     owner "root"
     group "root"
     mode "0775"
     notifies :restart, "service[god]"
   end
 
-  bash "enable-nginx-site-#{app}" do
+  bash "enable-nginx-site-#{new_resource.app}" do
     action :nothing
     code <<-EOF
-      /usr/sbin/nxensite #{app}
+      /usr/sbin/nxensite #{new_resource.app}
     EOF
   end
 
+  puts "#####################"
+  puts "#####################"
+  puts "#####################"
+  puts new_resource.ssl_cert
+  puts new_resource.ssl_key
   %w[crt key].each do |ext|
-    file "#{node['nginx']['dir']}/ssl/#{app}.#{ext}" do
+    file "#{node['nginx']['dir']}/ssl/#{new_resource.app}.#{ext}" do
       owner 'root'
       group 'root'
       mode '0600'
-			content(ext == 'crt' ? ssl_cert : ssl_key)
+			content(ext == 'crt' ? new_resource.ssl_cert : new_resource.ssl_key)
     end
   end
 
@@ -86,7 +91,7 @@ action :create do
   if has_http_auth
     package 'apache2-utils'
     file "htpasswd" do
-      path "#{node['nginx']['dir']}/htpasswd.#{app}"
+      path "#{node['nginx']['dir']}/htpasswd.#{new_resource.app}"
       owner "root"
       group "root"
       mode "0700"
@@ -94,28 +99,28 @@ action :create do
     end
   end
 
-  template "#{node['nginx']['dir']}/sites-available/#{app}" do
+  template "#{node['nginx']['dir']}/sites-available/#{new_resource.app}" do
     cookbook 'ic_rails'
     source 'nginx-app.conf.erb'
-    variables env: rails_env,
-              app: app,
-              hostnames: hostnames,
+    variables env: the_rails_env,
+              app: new_resource.app,
+              hostnames: new_resource.hostnames,
               has_http_auth: has_http_auth
     owner "root"
     group "root"
     mode "0755"
-    notifies :run, "bash[enable-nginx-site-#{app}]"
+    notifies :run, "bash[enable-nginx-site-#{new_resource.app}]"
     notifies :restart, "service[nginx]"
   end
 
-	template "/etc/logrotate.d/#{app}" do
+	template "/etc/logrotate.d/#{new_resource.app}" do
     cookbook 'ic_rails'
 		source 'logrotate-app.erb'
 		owner "root"
 		group "root"
 		mode "0644"
-		variables app: app,
-              app_user: app_user
+		variables app: new_resource.app,
+              app_user: new_resource.app_user
 	end
 
 end

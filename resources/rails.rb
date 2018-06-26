@@ -30,21 +30,21 @@ property :delayed_job_processes, Integer, default: 0
 
 action :create do
 
-  the_rails_env = if property_is_set?(:rails_env)
-                    rails_env
+  the_rails_env = if new_resource.property_is_set?(:rails_env)
+                    new_resource.rails_env
                   else
                     node.chef_environment
                   end
 
-  wants_unicorn = unicorn_workers > 0
+  wants_unicorn = new_resource.unicorn_workers > 0
   if wants_unicorn
     %w[hostnames ssl_cert ssl_key].each do |p|
-      raise "If you want unicorn you must provide #{p}" unless property_is_set?(p.to_sym)
+      raise "If you want unicorn you must provide #{p}" unless new_resource.property_is_set?(p.to_sym)
     end
   end
 
-  wants_sidekiq = sidekiq_processes > 0
-  wants_delayed_job = delayed_job_processes > 0
+  wants_sidekiq = new_resource.sidekiq_processes > 0
+  wants_delayed_job = new_resource.delayed_job_processes > 0
 
   # A place for the app to live:
   directory '/var/www' do
@@ -53,50 +53,50 @@ action :create do
     mode '0755'
   end
 
-  directory "/var/www/#{app}" do
-    owner app_user
-    group app_user
+  directory "/var/www/#{new_resource.app}" do
+    owner new_resource.app_user
+    group new_resource.app_user
     mode '0755'
   end
   %w{releases shared shared/config shared/log shared/tmp shared/tmp/pids shared/tmp/cache shared/tmp/sockets shared/vendor shared/vendor/bundle shared/public shared/public/system}.each do |dir|
-    directory "/var/www/#{app}/#{dir}" do
-      owner app_user
-      group app_user
+    directory "/var/www/#{new_resource.app}/#{dir}" do
+      owner new_resource.app_user
+      group new_resource.app_user
       mode '0755'
     end
   end
 
-  template "/var/www/#{app}/shared/config/database.yml" do
+  template "/var/www/#{new_resource.app}/shared/config/database.yml" do
     cookbook 'ic_rails'
     source 'database.yml.erb'
-    owner app_user
-    group app_user
+    owner new_resource.app_user
+    group new_resource.app_user
     mode "0600"
-    variables adapter: (with_postgis ? 'postgis' : 'postgresql'),
+    variables adapter: (new_resource.with_postgis ? 'postgis' : 'postgresql'),
               envs: [{
                 name: the_rails_env,
-                postgres_database: postgres_database,
-                postgres_username: postgres_username,
-                postgres_password: postgres_password,
-                postgres_host: postgres_host,
-                postgres_port: postgres_port,
-                pool_size: postgres_pool_size
+                postgres_database: new_resource.postgres_database,
+                postgres_username: new_resource.postgres_username,
+                postgres_password: new_resource.postgres_password,
+                postgres_host: new_resource.postgres_host,
+                postgres_port: new_resource.postgres_port,
+                pool_size: new_resource.postgres_pool_size
               }]
   end
 
-  template "/var/www/#{app}/shared/.env" do
+  template "/var/www/#{new_resource.app}/shared/.env" do
     cookbook 'ic_rails'
     source 'dotenv.erb'
-    owner app_user
-    group app_user
+    owner new_resource.app_user
+    group new_resource.app_user
     mode "0600"
-    variables envvars: envvars
+    variables envvars: new_resource.envvars
   end
 
   # Have to check outside the other resource:
   has_http_auth = (new_resource.property_is_set?(:http_auth_username) and !new_resource.http_auth_username.nil? and new_resource.property_is_set?(:http_auth_password) and !new_resource.http_auth_password.nil?)
   if wants_unicorn
-    unicorn app do
+    unicorn new_resource.app do
       app_user new_resource.app_user
       rails_env new_resource.rails_env
       unicorn_workers new_resource.unicorn_workers
@@ -109,7 +109,7 @@ action :create do
   end
 
   if wants_sidekiq
-    sidekiq app do
+    sidekiq new_resource.app do
       app_user new_resource.app_user
       rails_env new_resource.rails_env
       sidekiq_processes new_resource.sidekiq_processes
@@ -117,7 +117,7 @@ action :create do
   end
 
   if wants_delayed_job
-    delayed_job app do
+    delayed_job new_resource.app do
       app_user new_resource.app_user
       rails_env new_resource.rails_env
       delayed_job_processes new_resource.delayed_job_processes
