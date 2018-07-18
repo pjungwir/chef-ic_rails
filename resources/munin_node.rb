@@ -11,6 +11,7 @@ end
 resource_name :munin_node
 
 property :server, String, required: true
+property :with_postgres, [TrueClass, FalseClass], default: false
 
 action :create do
 
@@ -48,6 +49,15 @@ action :create do
   end
 
   package "munin-node"
+
+  if new_resource.with_postgres
+    package 'libdbd-pg-perl'
+  end
+
+  bash 'enable munin plugins' do
+    user 'root'
+    code 'munin-node-configure --suggest --shell | /bin/sh'
+  end
 
   template "/etc/munin/munin-node.conf" do
     cookbook 'ic_rails'
