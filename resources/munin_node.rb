@@ -12,6 +12,7 @@ resource_name :munin_node
 
 property :server, String, required: true
 property :with_postgres, [TrueClass, FalseClass], default: false
+property :with_nginx,    [TrueClass, FalseClass], default: false
 
 action :create do
 
@@ -52,6 +53,18 @@ action :create do
 
   if new_resource.with_postgres
     package 'libdbd-pg-perl'
+  end
+  if new_resource.with_nginx
+    # munin-node-configure won't help us here
+    # because it doesn't notice that nginx is installed:
+
+    link "/etc/munin/plugins/nginx_request" do
+      to "/usr/share/munin/plugins/nginx_request"
+    end
+
+    link "/etc/munin/plugins/nginx_status" do
+      to "/usr/share/munin/plugins/nginx_status"
+    end
   end
 
   bash 'enable munin plugins' do

@@ -73,11 +73,6 @@ action :create do
     EOF
   end
 
-  puts "#####################"
-  puts "#####################"
-  puts "#####################"
-  puts new_resource.ssl_cert
-  puts new_resource.ssl_key
   %w[crt key].each do |ext|
     file "#{node['nginx']['dir']}/ssl/#{new_resource.app}.#{ext}" do
       owner 'root'
@@ -108,7 +103,7 @@ action :create do
               has_http_auth: has_http_auth
     owner "root"
     group "root"
-    mode "0755"
+    mode "0644"
     notifies :run, "bash[enable-nginx-site-#{new_resource.app}]"
     notifies :restart, "service[nginx]"
   end
